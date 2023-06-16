@@ -270,6 +270,7 @@ data::InstallationResult TorizonGenericSecondary::install(const Uptane::Target& 
       break;
   }
 
+  std::string message = "";
   if (proc_output) {
     // ---
     // Handle "status" field (required):
@@ -298,12 +299,13 @@ data::InstallationResult TorizonGenericSecondary::install(const Uptane::Target& 
     // ---
     if (output["message"]) {
       LOG_INFO << "Action-handler " << config_.action_handler_path << " message: " << output["message"].asString();
+      message = output["message"].asString();
     }
   }
 
   maybeFinishInstall(result_code, new_fwpath, new_tgtname);
 
-  return data::InstallationResult(result_code, "");
+  return data::InstallationResult(result_code, message);
 }
 
 void TorizonGenericSecondary::getCompleteInstallVars(VarMap& vars, const Uptane::Target& target) const {
@@ -354,6 +356,7 @@ data::InstallationResult TorizonGenericSecondary::completeInstall(const Uptane::
       break;
   }
 
+  std::string message = "";
   if (proc_output) {
     // ---
     // Handle "status" field (required):
@@ -382,12 +385,13 @@ data::InstallationResult TorizonGenericSecondary::completeInstall(const Uptane::
     // ---
     if (output["message"]) {
       LOG_INFO << "Action-handler " << config_.action_handler_path << " message: " << output["message"].asString();
+      message = output["message"].asString();
     }
   }
 
   maybeFinishInstall(result_code, getNewFirmwarePath(), getNewTargetNamePath());
 
-  return data::InstallationResult(result_code, "");
+  return data::InstallationResult(result_code, message);
 }
 
 const TorizonGenericSecondary::VarMap& TorizonGenericSecondary::getSharedVars(bool update) const {
