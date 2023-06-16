@@ -270,7 +270,7 @@ data::InstallationResult TorizonGenericSecondary::install(const Uptane::Target& 
       break;
   }
 
-  std::string message = "";
+  std::string message = "TEST";
   if (proc_output) {
     // ---
     // Handle "status" field (required):
@@ -356,7 +356,7 @@ data::InstallationResult TorizonGenericSecondary::completeInstall(const Uptane::
       break;
   }
 
-  std::string message = "";
+  std::string message = "TEST";
   if (proc_output) {
     // ---
     // Handle "status" field (required):
