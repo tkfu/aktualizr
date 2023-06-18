@@ -30,8 +30,10 @@ class TorizonGenericSecondary : public ManagedSecondary {
 
   bool ping() const override { return true; }
 
+  bool getFirmwareInfo(Uptane::InstalledImageInfo& firmware_info, Json::Value& custom_meta) const;
+
   // Main methods being overridden from `ManagedSecondary`.
-  bool getFirmwareInfo(Uptane::InstalledImageInfo& firmware_info) const override;
+  Uptane::Manifest getManifest() const override;
   data::InstallationResult install(const Uptane::Target& target, const InstallInfo& info,
                                    const api::FlowControlToken* flow_control) override;
   boost::optional<data::InstallationResult> completePendingInstall(const Uptane::Target& target) override {
@@ -96,6 +98,11 @@ class TorizonGenericSecondary : public ManagedSecondary {
   FRIEND_TEST(TorizonGenericSecondaryTest, HandlerOutputExpected);
   FRIEND_TEST(TorizonGenericSecondaryTest, CompleteInstallFailure);
   FRIEND_TEST(TorizonGenericSecondaryTest, CompleteInstallSuccess);
+
+ private:
+  PublicKey public_key_;
+  std::string private_key;
+
 };
 
 }  // namespace Primary

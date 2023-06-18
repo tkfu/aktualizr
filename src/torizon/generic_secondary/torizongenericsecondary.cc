@@ -92,7 +92,7 @@ inline boost::filesystem::path addNewExtension(const boost::filesystem::path& fp
 TorizonGenericSecondary::TorizonGenericSecondary(const Primary::TorizonGenericSecondaryConfig& sconfig_in)
     : ManagedSecondary(dynamic_cast<const ManagedSecondaryConfig&>(sconfig_in)), config_(sconfig_in) {}
 
-bool TorizonGenericSecondary::getFirmwareInfo(Uptane::InstalledImageInfo& firmware_info) const {
+bool TorizonGenericSecondary::getFirmwareInfo(Uptane::InstalledImageInfo& firmware_info, Json::Value& custom_meta) const {
   const std::string action{"get-firmware-info"};
   const VarMap vars = {
       // TODO: [TORIZON] RFU.
@@ -163,6 +163,13 @@ bool TorizonGenericSecondary::getFirmwareInfo(Uptane::InstalledImageInfo& firmwa
     }
 
     // ---
+    // Handle "custom" field:
+    // ---
+    if (output["custom"]) {
+      custom_meta = output["custom"];
+    }
+
+    // ---
     // Handle "status" field (required):
     // ---
     if (output["status"]) {
@@ -209,6 +216,35 @@ void TorizonGenericSecondary::getInstallVars(VarMap& vars, const Uptane::Target&
   // TODO: [TORIZON] Handle offline-updates on a generic secondary.
   // vars["SECONDARY_IMAGE_PATH_OFFLINE"] = "{}";
   // vars["SECONDARY_METADATA_PATH_OFFLINE"] = "{}";
+}
+
+Uptane::Manifest TorizonGenericSecondary::getManifest() const {
+  Uptane::InstalledImageInfo firmware_info;
+  Json::Value custom_meta;
+  if (!getFirmwareInfo(firmware_info, custom_meta)) {
+    return Json::Value(Json::nullValue);
+  }
+
+  Json::Value manifest = Uptane::ManifestIssuer::assembleManifest(firmware_info, getSerial());
+  // consider updating Uptane::ManifestIssuer functionality to fulfill the given use-case
+  // and removing the following code from here so we encapsulate manifest generation
+  // and signing functionality in one place
+  manifest["attacks_detected"] = detected_attack;
+  manifest["custom"] = custom_meta;
+
+  Json::Value signed_ecu_version;
+
+  std::string b64sig = Utils::toBase64(Crypto::RSAPSSSign(nullptr, private_key, Utils::jsonToCanonicalStr(manifest)));
+  Json::Value signature;
+  signature["method"] = "rsassa-pss";
+  signature["sig"] = b64sig;
+
+  signature["keyid"] = public_key_.KeyId();
+  signed_ecu_version["signed"] = manifest;
+  signed_ecu_version["signatures"] = Json::Value(Json::arrayValue);
+  signed_ecu_version["signatures"].append(signature);
+
+  return signed_ecu_version;
 }
 
 data::InstallationResult TorizonGenericSecondary::install(const Uptane::Target& target, const InstallInfo& info,
@@ -303,7 +339,7 @@ data::InstallationResult TorizonGenericSecondary::install(const Uptane::Target& 
 
   maybeFinishInstall(result_code, new_fwpath, new_tgtname);
 
-  return data::InstallationResult(result_code, "");
+  return data::InstallationResult(result_code, output["message"].asString());
 }
 
 void TorizonGenericSecondary::getCompleteInstallVars(VarMap& vars, const Uptane::Target& target) const {
